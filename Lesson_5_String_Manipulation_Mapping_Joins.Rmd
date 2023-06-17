@@ -1,0 +1,371 @@
+---
+title: "R Workshop - Part 5 (Joins, Strings and Mapping)"
+author: "Peter Herman"
+date: "2023-06-26"
+output: slidy_presentation
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+library(learnr)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(sf)
+library(stringr)
+
+setwd(r"()")
+raw_school_data <- read_delim("Example_Datasets/California_Academic_Performance_Index.txt",delim="\t")
+raw_census_shapefiles <- st_read("Example_Datasets/California_Counties.geojson")
+
+census_shapefile_with_dummy_row <- raw_census_shapefiles %>%
+  mutate(dummy = 1)
+
+options(warn = -1)
+options(datatable.verbose = FALSE)
+
+```
+
+## Reading in Data
+
+Press K in your browser to avoid the site showing the next slide automatically.
+
+As we did with the last exercise, the typical R script opens with importing libraries, setting the working directory, and reading in data. 
+
+```{r E1, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5, echo=FALSE,message=FALSE}
+
+library(dplyr)
+library(stringr)
+library(plotly)
+library(tidycensus)
+
+setwd(r"()")
+
+raw_school_data <- read_delim("Example_Datasets/California_Academic_Performance_Index.txt",delim="\t")
+
+print(raw_school_data %>% head())
+
+```
+
+## Reading in Spatial Data
+
+For manipulating spatial/GIS data, we use the st_read command from the sf library.
+
+Objects with class sf are just like data frames, but with a geometry column that includes a geometry type (multipolgyon in this case) and coordinates.
+
+```{r E2, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5,message=FALSE}
+
+library(sf)
+
+raw_census_shapefiles <- st_read("Example_Datasets/California_Counties.geojson")
+
+class(raw_census_shapefiles)
+
+print(head(raw_census_shapefiles))
+
+```
+
+## Manipulating Spatial Data
+
+We can manipulate an sf object using dplyr commands. Here we're adding a column called dummy that has a value of 1 for all rows. 
+
+```{r E3, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5,message=FALSE}
+
+census_shapefile_with_dummy_row <- raw_census_shapefiles %>%
+  mutate(dummy = 1)
+
+print(head(census_shapefile_with_dummy_row))
+
+```
+
+
+## Manipulating a string variable to perform a data join
+
+The two data sets we want to join do not have any fields in common. The closest we have are the county name fields on both files
+
+```{r E4-setup}
+
+census_shapefile_with_dummy_row <- raw_census_shapefiles %>%
+  mutate(dummy = 1)
+
+```
+
+```{r E4, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5,message=FALSE}
+
+# The counties in the Census SF object have names that include county and state
+census_shapefile_with_dummy_row %>% arrange(NAME) %>% pull(NAME) %>% head() 
+
+# The counties in the school dataset do not 
+raw_school_data %>% arrange(cname)  %>% pull(cname) %>% unique() %>% head()
+
+```
+
+## Joining two datasets
+
+We want to compare the median academic performance index score among high schools in each county to the median household income in each county.
+
+We have two options here, the easy way is to use the str_c function from the stringr library to concatenate the county names in the school data with ", County, California"
+
+```{r E5-setup}
+
+census_shapefile_with_dummy_row <- raw_census_shapefiles %>%
+  mutate(dummy = 1)
+
+```
+
+```{r E5, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5,message=FALSE}
+
+# First, we want to have one row per county in our data frame
+median_api_per_hs_in_county <- raw_school_data %>%
+  filter(stype == "H") %>%
+  group_by(cname) %>%
+  summarize(median_api00 = median(api00)) %>%
+  ungroup()
+
+print(head(median_api_per_hs_in_county))
+```
+
+## Joining two datasets
+
+We want to compare the median academic performance index score among high schools in each county to the median household income in each county.
+
+We have two options here, the easy way is to use the str_c function from the stringr library to concatenate the county names in the school data with ", County, California"
+
+```{r E5_v12-setup}
+
+census_shapefile_with_dummy_row <- raw_census_shapefiles %>%
+  mutate(dummy = 1)
+
+# First, we want to have one row per county in our data frame
+median_api_per_hs_in_county <- raw_school_data %>%
+  filter(stype == "H") %>%
+  group_by(cname) %>%
+  summarize(median_api00 = median(api00)) %>%
+  ungroup()
+
+```
+
+```{r E5_v12, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5,message=FALSE}
+# Add the field we will be using for our data join
+school_data_to_join <- median_api_per_hs_in_county %>%
+  mutate(county_name_with_state = str_c(cname," County, California"))
+
+# Use the left_join function from dplyr to do the join
+# the join_by statement has an expression that is TRUE for every row we want to join 
+school_data_with_income <- school_data_to_join %>%
+  left_join(census_shapefile_with_dummy_row,by=join_by("county_name_with_state" == "NAME"))
+
+# We can test if our data joined by summing up the dummy variable and testing if it's equal to the number of rows in our dataset 
+nrow(school_data_with_income)
+print(sum(school_data_with_income %>% pull(dummy),na.rm=TRUE))
+
+```
+
+```{r E5_v2-setup}
+
+# First, we want to have one row per county in our data frame
+median_api_per_hs_in_county <- raw_school_data %>%
+  filter(stype == "H") %>%
+  group_by(cname) %>%
+  summarize(median_api00 = median(api00)) %>%
+  ungroup()
+
+# Add the field we will be using for our data join
+school_data_to_join <- median_api_per_hs_in_county %>%
+  mutate(county_name_with_state = str_c(cname," County, California"))
+
+# Use the left_join function from dplyr to do the join
+# the join_by statement has an expression that is TRUE for every row we want to join 
+school_data_with_income <- school_data_to_join %>%
+  left_join(census_shapefile_with_dummy_row,by=join_by("county_name_with_state" == "NAME")) 
+
+```
+
+## Finding rows that did not join
+
+We can use dplyr filter with our dummy variable to find the rows that did not join. It appears as though San Francisco is missing a space in the school data frame
+
+```{r E5_v2, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5,message=FALSE}
+
+# There is row that did not match
+print(nrow(school_data_with_income)) 
+print(sum(school_data_with_income %>% pull(dummy),na.rm=TRUE))
+
+# Filter to the rows that did not match
+Unmatched_Rows <- school_data_with_income %>%
+  filter(is.na(dummy))
+
+# Pull out the names of the counties that did not match
+Unmatched_Rows %>% pull(county_name_with_state) %>% unique()
+
+```
+
+## Using case_when to fix our data join
+
+We can use the case_when function from dplyr, fix the one county name that did not match, and leave the rest as is. We can use .default to avoid writing a conditional for every case. 
+```{r E5_v3-setup}
+
+median_api_per_hs_in_county <- raw_school_data %>%
+  filter(stype == "H") %>%
+  group_by(cname) %>%
+  summarize(median_api00 = median(api00)) %>%
+  ungroup()
+
+```
+
+```{r E5_v3, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5,message=FALSE}
+
+# Add the field we will be using for our data join, using case_when for the county name that did not match
+school_data_to_join <- median_api_per_hs_in_county %>%
+  mutate(county_name_with_state = case_when(
+    cname == "SanFrancisco"  ~ "San Francisco County, California",
+    .default = str_c(cname," County, California"))
+  ) 
+
+# Do a left join with the corrected field
+school_data_with_income <- school_data_to_join %>%
+  left_join(census_shapefile_with_dummy_row,by=join_by("county_name_with_state" == "NAME"))
+
+# Test if all fields matched
+print(nrow(school_data_with_income) == sum(school_data_with_income %>% pull(dummy)))
+
+```
+
+
+## Other string manipulation options - stringr
+
+Alternatively, we can use a number of different functions in the stringr package to remove the ", County, California" from the census data, rather than add it to the school data
+
+```{r E7, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5,message=FALSE}
+
+# We could use the str_remove function to identify the part of the string we want to remove
+# or use str_repalce to replace the part of the string we want to remove with an empty string
+# Or str_extract to just extract the part of the string we want with a regular expression
+census_shapefile_with_cleaned_names <- census_shapefile_with_dummy_row %>%
+  mutate(
+    Clean_Conunty_Name1 = str_remove(NAME," County, California"),
+    Clean_County_Name2 = str_replace(NAME," County, California",""),
+    Clean_County_Name3 = str_extract(NAME,  "([A-z]+| )(?= County)")
+  )
+
+# Taking a look at our results
+census_shapefile_with_cleaned_names %>%
+  select(Clean_Conunty_Name1,Clean_County_Name2,Clean_County_Name3) %>%
+  head() %>%
+  print()
+
+
+```
+
+## Other string manipulation options - separate
+
+Another alternative to extracting the county name from the census data frame is to use the separate function from dplyr
+
+```{r E8, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5,message=FALSE}
+
+# Separate takes one column, a list of new column names, and a separator
+census_shapefile_with_cleaned_names <- census_shapefile_with_dummy_row %>%
+  separate(NAME, c("COUNTY_NAME","STATE_NAME"), sep = ' County,')
+
+
+# Taking a look at our results
+census_shapefile_with_cleaned_names %>%
+  select(COUNTY_NAME,STATE_NAME) %>%
+  head() %>%
+  print()
+
+
+```
+
+## Mapping our data
+
+Now that we have our median api score appended to a sf object with a geometry column, we can map our data using the plotly library. 
+
+```{r E9-setup}
+
+# Add the field we will be using for our data join, using case_when for the county name that did not match
+median_api_per_hs_in_county <- raw_school_data %>%
+  filter(stype == "H") %>%
+  group_by(cname) %>%
+  summarize(median_api00 = median(api00)) %>%
+  ungroup()
+# 
+school_data_to_join <- median_api_per_hs_in_county %>%
+  mutate(county_name_with_state = case_when(
+    cname == "SanFrancisco"  ~ "San Francisco County, California",
+    .default = str_c(cname," County, California"))
+  )
+
+options(datatable.verbose = FALSE)
+
+```
+
+```{r E9, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5,message=FALSE}
+
+library(plotly)
+
+# Repeat our left join- but add a command to keep the resulting dataset as an sf object 
+school_data_with_income <- census_shapefile_with_dummy_row %>%
+  left_join(school_data_to_join,by=join_by("NAME" == "county_name_with_state")) %>%
+  st_sf()
+
+# Map our data
+api_score00_map <-plot_ly(
+    school_data_with_income, 
+    split = ~cname,
+    color = ~median_api00,
+    alpha = 1,
+    showlegend = FALSE
+)
+
+api_score00_map
+
+```
+
+```{r E10-setup}
+
+# Add the field we will be using for our data join, using case_when for the county name that did not match
+median_api_per_hs_in_county <- raw_school_data %>%
+  filter(stype == "H") %>%
+  group_by(cname) %>%
+  summarize(median_api00 = median(api00)) %>%
+  ungroup()
+# 
+school_data_to_join <- median_api_per_hs_in_county %>%
+  mutate(county_name_with_state = case_when(
+    cname == "SanFrancisco"  ~ "San Francisco County, California",
+    .default = str_c(cname," County, California"))
+  )
+
+school_data_with_income <- census_shapefile_with_dummy_row %>%
+  left_join(school_data_to_join,by=join_by("NAME" == "county_name_with_state")) %>%
+  st_sf() %>%
+  st_transform(st_crs(4326))
+
+options(datatable.verbose = FALSE)
+
+```
+
+## Mapping our data - visualization options
+
+There are many, many options available for improving the readability of our plotly maps. Here we have changed the colors in the map to a green color scale, and added a black border.
+
+```{r E10, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5,message=FALSE}
+
+
+# Map our data
+api_score00_map_custom <-plot_ly(
+    school_data_with_income, 
+    split = ~cname,
+    color = ~median_api00,
+    alpha = 1,
+    showlegend = FALSE,
+    stroke= I("black"),
+    colors = "Greens"
+)   
+
+api_score00_map_custom
+
+```
+
+

@@ -1,0 +1,406 @@
+---
+title: "R Workshop - Part 3 (Transforming Data)"
+author: "Peter Herman"
+date: "2023-06-26"
+output: slidy_presentation
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+library(learnr)
+library(readr)
+library(dplyr)
+library(tidyr)
+
+setwd(r"()")
+raw_school_data <- read_delim("Example_Datasets/California_Academic_Performance_Index.txt",delim="\t")
+
+```
+
+## Reading in Data
+
+Press K in your browser to avoid the site showing the next slide automatically.
+
+As we did with the last exercise, the typical R script opens with importing libraries, setting the working directory, and reading in data
+
+```{r C1, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+library(dplyr)
+
+setwd(r"()")
+
+raw_school_data <- read_delim("Example_Datasets/California_Academic_Performance_Index.txt",delim="\t")
+
+
+
+```
+
+## Transforming Data - Filtering
+
+We can use the filter() function in dplyr to filter our data frame
+
+```{r C2, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+library(dplyr)
+print(table(raw_school_data$stype))
+print(dim(raw_school_data))
+
+# In R, the == operator means, test for equivalence
+print(1 == 1)
+print(1 == 2)
+
+# We can use the == operator in the filter function to filter our data set
+high_schools_only <- raw_school_data %>%
+  filter(stype == "H")
+
+print(table(high_schools_only$stype))
+print(dim(high_schools_only))
+
+```
+
+## Transforming Data - Filtering with operators
+
+All three of the filter functions below yield the same data frame
+
+```{r C3, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+print(table(raw_school_data$stype))
+
+# We can use the or operator | in the filter function to filter to either high schools or middle schools
+high_schools_or_middle_schools1 <- raw_school_data %>%
+  filter(stype == "H" | stype == "M")
+
+# Alternatively we can use the NOT operator !  to filter every row that is not an elementary school
+high_schools_or_middle_schools2 <- raw_school_data %>%
+  filter(!stype == "E")
+
+# We could also use the %in% operator to create a vector of acceptable values
+high_schools_or_middle_schools3 <- raw_school_data %>%
+  filter(stype == c("H", "M"))
+
+
+print(table(high_schools_or_middle_schools1$stype))
+print(table(high_schools_or_middle_schools2$stype))
+print(table(high_schools_or_middle_schools3$stype))
+
+
+```
+
+## Transforming Data - Sort
+
+The arrange function will sort the data frame
+
+```{r C4, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+# For demo purposes, let's take the first five rows of the data frame using head()
+# Sorting by school name 
+Sorted_by_Name <- raw_school_data %>%
+  arrange(sname) %>%
+  head()
+
+print(Sorted_by_Name)
+
+# You can sort on multiple columns by adding multiple column names to the arrange function
+Sorted_by_Name_and_School_Type <- raw_school_data %>%
+  arrange(stype,sname) %>%
+  head()
+
+print(Sorted_by_Name_and_School_Type)
+
+
+```
+
+## Transforming Data - renaming columns
+
+The rename function is used to rename columns. 
+Within dplyr functions, use = for assignment.
+
+```{r C5, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+# See the first five rows of the data frame
+print(raw_school_data %>% head())
+
+# Rename columns
+# We can use the back quote to give R field names that have spaces
+Data_with_Renamed_Columns <- raw_school_data %>%
+  rename(
+    `School Type` = stype,
+     school_name = sname
+  )
+
+print(Data_with_Renamed_Columns %>% head())
+
+
+```
+
+## Transforming Data - removing and rearranging columns
+
+We can use the select function to subset our data or rearrange it
+
+```{r C6, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+# See the first five rows of the data frame
+print(raw_school_data %>% head())
+
+# We put the columns we want to keep into a vector within the select statement
+First_three_columns <- raw_school_data %>%
+  select(c(school_id,stype))
+
+print(First_three_columns %>% head())
+
+```
+
+We can also put the columns in a different order using select
+
+```{r C6_2, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+First_three_columns_reordered <- raw_school_data %>%
+  select(c(name,school_id))
+
+print(First_three_columns_reordered %>% head())
+
+```
+
+We can also remove columns using select with the minus sign - 
+
+```{r C6_3, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+First_column_only <- raw_school_data %>%
+  select(c(name,school_id,stype)) %>%
+  select(-c(stype,school_id))
+
+print(First_column_only %>% head())
+
+```
+
+## Transforming Data - adding columns
+
+The mutate function is used to add columns
+
+```{r C7, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+# Our data has two years of test score data (the test is called API)
+Test_Columns_Only <- raw_school_data %>%
+  select(c(school_id,name,api00,api99)) 
+
+print(Test_Columns_Only %>% head())
+
+# We can use mutate to create a new field with difference in test score between 2000 and 1999
+Test_Scores_with_differences <- Test_Columns_Only %>%
+  mutate(Test_Score_Difference = api99 - api00)
+
+print(Test_Scores_with_differences %>% head())
+
+```
+
+## Transforming Data - adding multiple columns
+
+We can create multiple fields within one call to mutate()
+
+```{r C8, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+# Our data has two years of test score data (the test is called API)
+Test_Score_Data <- raw_school_data %>%
+  select(c(school_id,name,api00,api99)) %>%
+  mutate(Test_Score_Difference = api00 - api99,
+         Raw_Change_Rate = Test_Score_Difference/api99,
+         Change_Percent = round(Raw_Change_Rate*100,digits = 1),
+         Change_Percent_Character = paste0(as.character(Change_Percent),"%")
+         ) %>%
+  select(name,Test_Score_Difference,Raw_Change_Rate,Change_Percent,Change_Percent_Character)
+
+print(Test_Score_Data %>% head())
+
+```
+
+## Transforming Data - Recoding
+
+We can recode variables using the case_when function within mutate()
+```{r C9, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+# Our data has two years of test score data (the test is called API)
+Test_Score_Data <- raw_school_data %>%
+  select(c(school_id,name,api00,api99)) %>%
+  mutate(Test_Score_Difference = api00 - api99) %>%
+  mutate(Difference_Type= case_when(
+   Test_Score_Difference > 0 ~ "Positive",
+   Test_Score_Difference < 0 ~ "Negative"
+  ))
+
+print(Test_Score_Data %>% head())
+
+# Notice we have some NA's because we didn't account for if there's no difference in exam score
+print(table(Test_Score_Data$Difference_Type,useNA = c("always")))
+
+```
+
+## Transforming Data - transforming multiple variables at once
+
+We can use mutate_if to transform all columns that pass a logic test
+
+```{r C10, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+# Start with our normal test score dataset
+Test_Score_Data <- raw_school_data %>%
+  select(c(school_id,name,api00,api99)) 
+
+# We can change all numeric fields to character using mutate_if
+# mutate if takes two arguments, a logic test that runs on each column, and a function to apply 
+print(is.numeric(9))
+print(is.numeric("apple"))
+print(as.character(9))
+
+Character_Test_Score_Data <- Test_Score_Data %>%
+  mutate_if(is.numeric, as.character)
+
+print(Character_Test_Score_Data %>% head())
+
+# You can use your own custom functions in a mutate statement
+double_my_number <- function(num){return(num*2)}
+
+Doubled_Test_Scores <- Test_Score_Data %>%
+  mutate_if(is.numeric, double_my_number)
+
+print(Doubled_Test_Scores %>% head())
+
+
+```
+
+
+## Transforming Data - transforming multiple variables at once
+
+We can use mutate_at to transform all columns within a vector
+
+```{r C11, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+# Start with our normal test score dataset
+Test_Score_Data <- raw_school_data %>%
+  select(c(school_id,name,api00,api99)) 
+
+# Using mutate_at we can select the fields we want to transform individually
+# This is one of the few times we have to refer to variables in quotes in a dplyr function
+Test_Score_Data_Api100_Character <- Test_Score_Data %>%
+  select(c(school_id,name,api00,api99)) %>%
+  mutate_at(c("api00"),as.character)
+
+# Notice how api00 is now a character variable
+print(Test_Score_Data_Api100_Character %>% head())
+
+
+```
+
+## Transforming Data - removing duplicates
+
+We can use the length and unique functions to see if there are duplicates in our dataset
+
+```{r C12, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+# The unique function will create a vector with the unique values of a column
+print(raw_school_data %>% pull(stype) %>% unique())
+
+# The length function will tell us the length of a vector
+print(raw_school_data %>% pull(school_id) %>% unique() %>% length())
+# It appears as though we have one row per school_id
+print( dim(raw_school_data))
+
+# However, there are schools with repeated names! 
+print(raw_school_data %>% pull(name) %>% unique() %>% length())
+
+# If we wanted one row per school name
+Unique_School_Name_Dataset <- raw_school_data %>%
+  distinct(name,.keep_all = TRUE)
+
+# The keep all argument allows us to keep all the other columns in our data frame
+print(dim(Unique_School_Name_Dataset))
+
+```
+
+## Transforming Data - rotating data
+
+Let's say we wanted our data in "wide" instead of "long" format
+For example, if we wanted one column per school rather than one row per school
+
+```{r C13, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+library(tidyr)
+
+# For demo purposes, let's just take the first 5 rows and test score columns
+Test_Score_Data <- raw_school_data %>%
+  select(c(name,api00,api99)) %>%
+  head()
+
+print(Test_Score_Data)
+
+Wide_Formatted_Data <- Test_Score_Data %>%
+  select(name,api00) %>%
+  pivot_wider(
+    names_from = name,
+    values_from = api00
+  ) 
+print(Wide_Formatted_Data)
+
+
+```
+
+## Transforming Data - appending data frames together
+
+Let's say we were creating a data frame with 2 rows, test scores in 2000 and in 1999, and one column per school
+
+```{r C14, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+library(tidyr)
+
+# For demo purposes, let's just take the first 5 rows and test score columns
+Test_Score_Data <- raw_school_data %>%
+  select(c(name,api00,api99)) %>%
+  head()
+
+# Create two wide versions of the data
+Wide_data_api00 <- Test_Score_Data %>%
+  select(name,api00) %>%
+  pivot_wider(
+    names_from = name,
+    values_from = api00
+  ) %>%
+  mutate(Label = "API Score 2000")
+
+Wide_data_api99 <- Test_Score_Data %>%
+  select(name,api99) %>%
+  pivot_wider(
+    names_from = name,
+    values_from = api99
+  ) %>%
+  mutate(Label = "API Score 1999")
+
+# Stack them using bind_rows
+Wide_Data_Stacked <- Wide_data_api00 %>%
+  bind_rows(Wide_data_api99)
+
+print(Wide_Data_Stacked)
+
+# Move the label column to the front
+Wide_Data_Stacked_Reordered <- Wide_Data_Stacked %>%
+  relocate(Label)
+
+print(Wide_Data_Stacked_Reordered)
+
+```
+
+## Exporting Data 
+
+We can export using write_delim(), or in a native R format using write_rds()
+
+```{r C15, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+# For demo purposes, let's just take the first 5 rows and test score columns
+Test_Score_Data <- raw_school_data %>%
+  select(c(name,api00,api99)) %>%
+  head()
+
+# We can use these two functions to write data from R (does not work in the browser)
+# write_delim(Test_Score_Data,"my_output_dataset.csv",delim=",")
+# write_rds(Test_Score_Data,"my_output_dataset.rds")
+
+
+```
+

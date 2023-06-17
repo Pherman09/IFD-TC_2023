@@ -1,0 +1,147 @@
+---
+title: "R Workshop - Part 2 (Reading and Exploring Data)"
+author: "Peter Herman"
+date: "2023-06-26"
+output: slidy_presentation
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+library(learnr)
+library(readr)
+library(dplyr)
+
+setwd(r"()")
+raw_school_data <- read_delim("Example_Datasets/California_Academic_Performance_Index.txt",delim="\t")
+
+```
+
+## Reading in Data
+
+Press K in your browser to avoid the site showing the next slide automatically.
+
+We can use setwd to tell R where to look for our data
+read_delim from the readr library should be used to read in data. 
+
+```{r B1, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+library(readr)
+
+# setwd (set working directory)
+setwd(r"()")
+
+# read_delim will tell you the data type of each column
+raw_school_data <- read_delim("Example_Datasets/California_Academic_Performance_Index.txt",delim="\t")
+
+
+
+```
+
+## Seeing information about a function
+
+If we want to know more about the read_delim function and what options are available, we can use the ? symbol
+
+```{r B2, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+?read_delim
+
+```
+
+## Other ways of reading in data
+
+R can handle most types of data, it's a just a matter of finding the correct library
+
+```{r B3, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+library(haven)
+?read_sas
+
+library(readxl)
+?read_xlsx
+
+```
+
+## Exploring a dataset - column names
+
+We can use the names() function to get a vector of the column names of a data frame
+
+```{r B4, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+names(raw_school_data)
+
+
+```
+
+## Exploring a dataset - dimensions
+
+We can use the dim() function to see how many rows and columns there are in the dataset
+
+```{r B5, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+dim(raw_school_data)
+
+
+```
+
+## Exploring a dataset - head
+
+We can look at the first five rows of our data frame using head
+
+```{r B6, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+head(raw_school_data)
+
+
+```
+
+## Exploring a dataset - View
+
+We can see the full dataset using View
+
+```{r B7, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+View(raw_school_data)
+
+```
+
+## Exploring a dataset - summary
+
+You can get a sense of the distribution of the data in each column using summary
+See the data dictionary here: https://r-survey.r-forge.r-project.org/survey/html/api.html
+
+```{r B8, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+# Take a look at the average class size for years K-3
+summary(raw_school_data$acs.k3)
+
+# There are 1823 NA's, as our school level data frame contains high, middle, and elementary schools
+
+# Rather than use the $ operator, we can also use pull() from the dplyr function, which does the same thing.
+library(dplyr)
+
+# Take a look at the average class size for years 4-6
+raw_school_data %>%
+  pull(acs.46) %>%
+  summary()
+
+
+```
+
+## Exploring a dataset - table
+
+We can create quick frequency tables in R using the table() function
+
+```{r B9, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+# See how many schools of each type we have
+table(raw_school_data$stype)
+
+# By default, table will not include missing data
+# Here's a frequency of class sizes for years K-3
+table(raw_school_data$acs.k3)
+
+# Here's a frequency of class sizes including missing data
+table(raw_school_data$acs.k3,useNA = c("always"))
+
+```
+

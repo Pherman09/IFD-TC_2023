@@ -1,0 +1,402 @@
+---
+title: "R Workshop - Part 4 (Summarizing and Plotting Data)"
+author: "Peter Herman"
+date: "2023-06-26"
+output: slidy_presentation
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+library(learnr)
+library(readr)
+library(dplyr)
+library(tidyr)
+
+setwd(r"()")
+raw_school_data <- read_delim("Example_Datasets/California_Academic_Performance_Index.txt",delim="\t")
+
+```
+
+## Reading in Data
+
+Press K in your browser to avoid the site showing the next slide automatically.
+
+As we did with the last exercise, the typical R script opens with importing libraries, setting the working directory, and reading in data. We will be using the plotly library this time.
+
+```{r D1, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+library(dplyr)
+library(plotly)
+
+setwd(r"(C:\Users\peter\OneDrive\Documents\Work\Field_Directors)")
+
+raw_school_data <- read_delim("Example_Datasets/California_Academic_Performance_Index.txt",delim="\t")
+
+
+```
+
+## Summarizing Data
+
+Using the dplyr summarize() function, we can collapse data into a single row.
+Summarize is syntactically similar to mutate
+
+```{r D2, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+# enroll is the number of students enrolled in a school
+enroll_Summary_Stats <- raw_school_data %>% 
+  filter(!is.na(enroll)) %>%
+  summarize(
+    Mean_enroll = mean(enroll),
+    Max_enroll = max(enroll),
+    Min_enroll = min(enroll)
+  )
+
+print(enroll_Summary_Stats)
+
+# There's a special function called n() which gives the count of rows in a summary group
+enroll_Summary_Stats2 <- raw_school_data %>% 
+  filter(!is.na(enroll)) %>%
+  summarize(
+    Mean_enroll = mean(enroll),
+    Max_enroll = max(enroll),
+    Min_enroll = min(enroll),
+    `Number of Schools` = n()
+  )
+
+print(enroll_Summary_Stats2)
+```
+
+## Summarizing Data - By Group
+
+Using the dplyr group_by() function, we can change the unit of analysis to an individual group. For example, school type
+
+```{r D3, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+# Recall we have a variable,stype, that states whether each row is a elementary, middle or high school
+enroll_Summary_Stats_by_Stype <- raw_school_data %>% 
+  filter(!is.na(enroll)) %>%
+  group_by(stype) %>%
+  summarize(
+    Mean_enroll = mean(enroll),
+    Max_enroll = max(enroll),
+    Min_enroll = min(enroll),
+   `Number of Schools` = n()
+  )
+
+print(enroll_Summary_Stats_by_Stype)
+
+```
+
+## Plotting Data - Bar Charts
+
+Let's say we wanted to compare the mean scores of each school type individually
+
+```{r D4, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+# First, let's use the summary dataset we created on the last slide
+enroll_Summary_Stats_by_Stype <- raw_school_data %>% 
+  filter(!is.na(enroll)) %>%
+  group_by(stype) %>%
+  summarize(
+    Mean_enroll = mean(enroll),
+    Max_enroll = max(enroll),
+    Min_enroll = min(enroll),
+   `Number of Schools` = n()
+  )
+
+# We can create a bar chart using the plot_ly function from the plotly library
+# the tilde sign means "evaluate" in R, it's rarely used out of this context
+library(plotly)
+bar_chart <- plot_ly(data =enroll_Summary_Stats_by_Stype,
+                       type = "bar",
+                       y = ~stype ,
+                       x = ~`Mean_enroll`)
+
+bar_chart 
+
+# We can make a horizontal bar chart by switching the variable in the x and y arguments
+
+```
+
+
+## Plotting Data - Grouped Bar Charts
+
+Let's say we wanted to compare the mean scores of each school type, as wenroll as the max and min
+
+```{r D5, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+# First, let's use the summary dataset we created on the last slide
+enroll_Summary_Stats_by_Stype <- raw_school_data %>% 
+  filter(!is.na(enroll)) %>%
+  group_by(stype) %>%
+  summarize(
+    Mean_enroll = mean(enroll),
+    Max_enroll = max(enroll),
+    Min_enroll = min(enroll),
+   `Number of Schools` = n()
+  )
+
+# Make the min bar chart, then use add_trace to add the other types of variables
+# We do min first, as we want the order to be min, mean, max
+min_bar_chart <- plot_ly(data =enroll_Summary_Stats_by_Stype,
+                       type = "bar",
+                       x = ~stype ,
+                       y = ~`Min_enroll`,
+                       name = "Min Enrollment")
+
+min_bar_chart_with_mean <- min_bar_chart %>%
+  add_trace(y = ~`Mean_enroll`,name = "Mean Enrollment")
+
+min_bar_chart_with_mean_and_max <- min_bar_chart_with_mean %>%
+  add_trace(y = ~`Max_enroll`,name = "Max Enrollment")
+
+min_bar_chart_with_mean_and_max 
+
+
+```
+
+
+## Plotting Data - Changing the Axis Titles
+
+We can change the appearance of the chart using the layout function. There are many many things one can adjust using this function: https://plotly.com/r/reference/#Layout_and_layout_style_objects
+
+```{r D6-setup}
+
+# First, let's use the summary dataset we created on the last slide
+enroll_Summary_Stats_by_Stype <- raw_school_data %>% 
+  filter(!is.na(enroll)) %>%
+  group_by(stype) %>%
+  summarize(
+    Mean_enroll = mean(enroll),
+    Max_enroll = max(enroll),
+    Min_enroll = min(enroll),
+   `Number of Schools` = n()
+  )
+
+# Make the mean bar chart, then use add_trace to add the other types of variables
+min_bar_chart <- plot_ly(data =enroll_Summary_Stats_by_Stype,
+                       type = "bar",
+                       x = ~stype ,
+                       y = ~`Min_enroll`,
+                       name = "Min Enrollment")
+
+min_bar_chart_with_mean <- min_bar_chart %>%
+  add_trace(y = ~`Mean_enroll`,name = "Mean Enrollment")
+
+min_bar_chart_with_mean_and_max <- min_bar_chart_with_mean %>%
+  add_trace(y = ~`Max_enroll`,name = "Max Enrollment")
+
+
+```
+
+```{r D6, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+# Look at the chart from the previous slide
+min_bar_chart_with_mean_and_max
+
+# Change the axis titles
+bar_chart_new_layout <- min_bar_chart_with_mean_and_max %>%
+  layout(yaxis = list(title = 'Number of Students'),
+         xaxis = list(title = 'School Type'),
+         title = "Enrollment by School Type")
+  
+
+bar_chart_new_layout
+```
+
+## Plotting Data - Colors 
+
+The marker argument of the plot_ly or add_trace functions determines appearance 
+This link has a lot more information about bar chart appearance: https://plotly.com/r/bar-charts/
+
+```{r D7-setup}
+enroll_Summary_Stats_by_Stype <- raw_school_data %>% 
+  filter(!is.na(enroll)) %>%
+  group_by(stype) %>%
+  summarize(
+    Mean_enroll = mean(enroll),
+    Max_enroll = max(enroll),
+    Min_enroll = min(enroll),
+   `Number of Schools` = n()
+  )
+
+```
+
+
+```{r D7, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+# You can use the marker argument to change the bar's appearance
+# Line describes the outline of the marker
+mean_bar_chart <- plot_ly(data =enroll_Summary_Stats_by_Stype,
+                       type = "bar",
+                       x = ~stype ,
+                       y = ~`Mean_enroll`,
+                       name = "Mean Enrollment",
+                       marker = list(color = 'lightblue',
+                                     line = list(color = 'blue', width = 5)
+                                     )
+                       )
+
+mean_bar_chart 
+
+```
+
+## Plotting Data - Labels 
+
+The text and textposition arguments can be used to label the charts 
+
+```{r D8-setup}
+enroll_Summary_Stats_by_Stype <- raw_school_data %>% 
+  filter(!is.na(enroll)) %>%
+  group_by(stype) %>%
+  summarize(
+    Mean_enroll = mean(enroll),
+    Max_enroll = max(enroll),
+    Min_enroll = min(enroll),
+   `Number of Schools` = n()
+  )
+
+```
+
+
+```{r D8, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+# We can label each column with its value
+mean_bar_chart <- plot_ly(data =enroll_Summary_Stats_by_Stype,
+                       type = "bar",
+                       x = ~stype ,
+                       y = ~`Mean_enroll`,
+                       text = ~`Mean_enroll`,
+                       textposition = "middle"
+                       )
+
+mean_bar_chart 
+
+# We can even apply a function to the text to format it more legibly 
+mean_bar_chart2 <- plot_ly(data =enroll_Summary_Stats_by_Stype,
+                       type = "bar",
+                       x = ~stype ,
+                       y = ~`Mean_enroll`,
+                       text = ~round(`Mean_enroll`),
+                       textposition = "outside"
+                       )
+
+mean_bar_chart2
+
+
+```
+
+## Plotting Data - Scatterplots 
+
+Changing the type argument will yield a different chart type in Plotly
+The mode argument is either "markers" or "lines" and applies only to scatterplots
+
+```{r D9, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+scatterplot <- plot_ly(data = raw_school_data,
+                       type = "scatter",
+                       x = ~meals,
+                       y = ~api00,
+                       mode="markers")
+
+# Customize the scatterplot
+scatterplot_formatted <- scatterplot %>% 
+  layout(title = "Scatterplot of Students Eligible for Subsidized Meals vs API Scores",
+         xaxis = list(title = "Percent of Students Eligible for Subsized Meals"),
+         yaxis = list(title = "Scores 2000"))
+
+scatterplot_formatted
+
+```
+
+
+## Plotting Data - Scatterplots 
+
+Changing the type argument will yield a different chart type in Plotly
+The mode argument is either "markers" or "lines" and applies only to scatterplots
+
+```{r D9, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+scatterplot <- plot_ly(data = raw_school_data,
+                       type = "scatter",
+                       x = ~meals,
+                       y = ~api00,
+                       mode="markers")
+
+# Customize the scatterplot
+scatterplot_formatted <- scatterplot %>% 
+  layout(title = "Scatterplot of Students Eligible for Subsidized Meals vs API Scores",
+         xaxis = list(title = "Percent of Students Eligible for Subsized Meals"),
+         yaxis = list(title = "Scores 2000"))
+
+scatterplot_formatted
+
+```
+
+
+## Plotting Data - Histograms 
+
+Changing the type to "histogram" will yield a histogram
+There are so many plotly options for graphics, it's worth perusing the documentation:
+https://plotly.com/r/ 
+
+```{r D10, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+# Create a histogram
+histogram_api100 <- plot_ly(data = raw_school_data,
+                       type = "histogram",
+                       x = ~api00,
+                       name="API Score 2000"
+                       )
+
+# Overlay two histograms on top of one another
+histogram_comparison <- histogram_api100 %>%
+  add_trace(type="histogram", x = ~api99,alpha = 0.6,name="API Score 1999") %>%
+  layout(barmode="overlay")
+
+histogram_comparison
+
+```
+
+## Exporting Graphics 
+
+You can save your graphics as static images, or as interactive html files. 
+
+```{r D11-setup}
+
+# Create a histogram
+histogram_api100 <- plot_ly(data = raw_school_data,
+                       type = "histogram",
+                       x = ~api00,
+                       name="API Score 2000"
+                       )
+
+# Overlay two histograms on top of one another
+histogram_comparison <- histogram_api100 %>%
+  add_trace(type="histogram", x = ~api99,alpha = 0.6,name="API Score 1999") %>%
+  layout(barmode="overlay")
+
+```
+
+```{r D11, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5}
+
+# Recall from the last slide we have a plotly object called histogram_comparison
+class(histogram_comparison)
+
+# Save as a static image: it is possible to do this with some dependencies
+https://plotly-r.com/exporting-static-images.html#with-code
+
+# You can also save directly from the Plotly chart itself using the camera button
+
+# Save as HTML File
+library(htmlwidgets)
+#saveWidget(histogram_comparison, "histogram_plotly_chart.html")
+
+
+```
+
+
+
+
+
+

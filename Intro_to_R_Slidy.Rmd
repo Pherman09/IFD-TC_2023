@@ -1,0 +1,27 @@
+---
+title: "Introduction to R"
+author: "Peter Herman"
+date: "2023-06-26"
+output: slidy_presentation
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+library(learnr)
+library(readr)
+
+setwd(r"()")
+Raw_School_Data <- read_delim("Example_Datasets/California_Academic_Performance_Index.txt",deli="\t")
+
+
+```
+
+## Time Series with dygraphs
+
+Modify the dyOptions to customize the graph's appearance:
+
+```{r dygraph-options, exercise=TRUE, exercise.eval=TRUE, fig.height=5.5}
+
+
+
+```

@@ -1,0 +1,132 @@
+---
+title: "R Workshop - Part 6 (Survey Data)"
+author: "Peter Herman"
+date: "2023-06-26"
+output: slidy_presentation
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+
+library(learnr)
+library(haven)
+library(srvyr)
+library(survey)
+library(dplyr)
+
+setwd(r"()")
+
+raw_survey_data <- read_sav("Example_Datasets/ATP W23.sav")
+
+
+survey_data_recoded <- raw_survey_data %>%
+  mutate(THERMO2_THERMTRUMP_W23_RECODED = case_when(
+    THERMO2_THERMTRUMP_W23 == 999 ~ NA_real_,
+    .default = as.numeric(THERMO2_THERMTRUMP_W23)
+  ))
+
+PEW_design_srvyr <- survey_data_recoded %>%
+  as_survey_design(
+    weights=WEIGHT_W23
+  )
+
+options(warn = -1)
+options(datatable.verbose = FALSE)
+
+```
+
+## Reading in Data
+
+Press K in your browser to avoid the site showing the next slide automatically.
+
+This dataset comes from Pew Research Center’s American Trends Panel, and is a .sav file that exported from SPSS. The haven library allows us to import this file into R. There is also a function for reading in SAS .sas7bdat files. 
+https://www.pewresearch.org/politics/dataset/american-trends-panel-wave-23/ 
+
+
+```{r E1, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5, echo=FALSE,message=FALSE}
+
+library(haven)
+library(srvyr)
+library(survey)
+library(dplyr)
+
+setwd(r"()")
+
+raw_survey_data <- read_sav("Example_Datasets/ATP W23.sav")
+
+
+```
+
+## Recoding Survey Data
+
+Respondents from the 2016 American Trends Panel were asked to rate Donald Trump on a scale of 1-100. This variable is called THERMO2_THERMTRUMP_W23.
+
+Some of these respondents refused to answer the question. We should recode these respondents as NA.
+
+Since we read this data in from a SPSS file, we can read the label on the variable, and that will tell us which values need to be recoded. 
+
+```{r E2, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5, echo=FALSE,message=FALSE}
+
+print_labels(raw_survey_data$THERMO2_THERMTRUMP_W23)
+
+survey_data_recoded <- raw_survey_data %>%
+  mutate(THERMO2_THERMTRUMP_W23_RECODED = case_when(
+    THERMO2_THERMTRUMP_W23 == 999 ~ NA_real_,
+    .default = as.numeric(THERMO2_THERMTRUMP_W23)
+  ))
+
+```
+
+## Setting up a survey design object
+
+We will be using the srvyr library, which allows for dplyr-like syntax around the functions from the popular survey library. 
+
+To start- we need to define a survey design object, which is sort of like a dataframe but with the weight field specified.
+
+```{r E3, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5,message=FALSE}
+
+# There are many options available in the as_survey_design function, for strata, clusters, sampling probabilities etc
+
+# However, we're just specifying weights
+PEW_design_srvyr <- survey_data_recoded %>%
+  as_survey_design(
+    weights=WEIGHT_W23
+  )
+
+```
+
+## Survey Summary Statistics 
+
+We can use the dplyr summarize syntax along with the survey_mean function from the survey package to calculate the mean Trump rating among panel respondents.
+
+Note that we must remove na's from our mean calculation using the na.rm argument
+
+```{r E4, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5,message=FALSE}
+
+PEW_design_srvyr %>%
+  summarize(mean_trump_fav = survey_mean(THERMO2_THERMTRUMP_W23_RECODED,na.rm = TRUE)) %>%
+  print()
+
+# Note how the survey mean differs from the unweighted mean
+survey_data_recoded  %>%
+  summarize(mean_trump_fav = mean(THERMO2_THERMTRUMP_W23_RECODED,na.rm = TRUE)) %>%
+  print()
+  
+```
+
+## Survey Summary by Group 
+
+We can group respondents by race/ethnicity (F_RACETHN_RECRUITMENT) using the dplyr group_by syntax
+
+```{r E5, exercise=TRUE, exercise.eval=FALSE, fig.height=5.5,message=FALSE}
+
+PEW_design_srvyr %>%
+  group_by(F_RACETHN_RECRUITMENT) %>%
+  summarize(mean_trump_fav = survey_mean(THERMO2_THERMTRUMP_W23_RECODED,na.rm = TRUE)) %>%
+  print()
+
+```
+
+
+
+
